@@ -165,6 +165,7 @@ create_vm() {
     --image "CentOS85Gen2" \
     --vnet-name "$vnet_name" \
     --subnet "$subnet_name" \
+    --admin-username silkus \
     --zone "$zone" \
     --public-ip-address "" \
     --no-wait \
