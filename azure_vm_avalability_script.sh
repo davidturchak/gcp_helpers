@@ -152,7 +152,7 @@ for zone in "${zones[@]}"; do
         --zone "$zone" \
         --public-ip-address "" \
         --no-wait \
-        --output tsv \
+        --output tsv
 	done
     # Wait for all background jobs to complete
     for job in "${!job_statuses[@]}"; do
