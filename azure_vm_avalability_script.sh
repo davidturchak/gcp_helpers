@@ -130,17 +130,18 @@ az network vnet create \
   --subnet-prefix "10.0.1.0/24" \
   --output tsv
 
-zones=$(az vm list-skus --location "$region" --query "[?zones].{Zone:zones}" -o tsv | tr '\n' ' ')
+zones=($(az vm list-skus --location eastus --size $vm_size --output json | jq -r '.[0].locationInfo[0].zones[]'))
 
-for zone in $zones; do
+
+for zone in "${zones[@]}"; do
+  unset success_count failure_count job_statuses
   success_count=0
   failure_count=0
   declare -A job_statuses
 
   for i in $(seq 1 "$number_of_vms"); do
     vm_name="vm-${zone}-${i}"
-    (
-      az vm create \
+    az vm create \
         --resource-group "$resource_group" \
         --name "$vm_name" \
         --location "$region" \
@@ -152,20 +153,15 @@ for zone in $zones; do
         --public-ip-address "" \
         --no-wait \
         --output tsv \
-      && job_statuses[$i]=success \
-      || job_statuses[$i]=failure
-    ) &
-  done
-
-  wait
-
-  for status in "${job_statuses[@]}"; do
-    if [[ "$status" == "success" ]]; then
-      ((success_count++))
-    else
-      ((failure_count++))
-    fi
-  done
+	done
+    # Wait for all background jobs to complete
+    for job in "${!job_statuses[@]}"; do
+        if wait "$job"; then
+            success_count=$((success_count + 1))
+        else
+            failure_count=$((failure_count + 1))
+        fi
+    done
 
   echo "VMSize: $size, Zone $zone: Successfully created $success_count VMs, failed to create $failure_count VMs" >> /tmp/test_zones.log
 done
