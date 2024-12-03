@@ -175,7 +175,7 @@ main() {
   declare -A job_statuses
 
   for i in $(seq 1 "$number_of_vms"); do
-    vm_name="vm-${region}z${zone}-${i}"
+    vm_name="vm-${region}-z${zone}-${i}"
     create_vm "$vm_name" "$resource_group" "$region" "$size" "$vnet_name" "$subnet_name" "$zone" &
     job_statuses[$!]="$vm_name"
   done
@@ -189,7 +189,7 @@ main() {
       fi
   done
 
-  echo "VMSize: $size, Zone: $zone Successfully created: $success_count, Failed to create: $failure_count" >> /tmp/test_zones.log
+  echo "VMSize: $size, Zone: $zone, Successfully created: $success_count, Failed to create: $failure_count" >> /tmp/test_zones.log
 done
 
   az group delete --name "$resource_group" --yes --no-wait --output tsv
