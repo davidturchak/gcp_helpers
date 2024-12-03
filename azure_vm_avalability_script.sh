@@ -173,10 +173,11 @@ main() {
   create_vnet "$vnet_name" "$resource_group" "$subnet_name"
   
   zones=$(get_zones "$region" "$size")
-    for zone in "${zones[@]}"; do
-    echo "$zone"
-    done
-    exit
+  for zone in "${zones[@]}"; do
+  echo "zone: $zone"
+  done
+  exit
+
 
   rm -f /tmp/test_zones.log
  for zone in "${zones[@]}"; do
