@@ -147,8 +147,6 @@ create_vm() {
   local vnet_name=$5
   local subnet_name=$6
   local zone=$7
-  echo $zone
-  exit
   az vm create \
     --resource-group "$resource_group" \
     --name "$vm_name" \
@@ -175,6 +173,10 @@ main() {
   create_vnet "$vnet_name" "$resource_group" "$subnet_name"
   
   zones=$(get_zones "$region" "$size")
+    for zone in "${zones[@]}"; do
+    echo "$zone"
+    done
+    exit
 
   rm -f /tmp/test_zones.log
  for zone in "${zones[@]}"; do
