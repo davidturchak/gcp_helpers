@@ -120,14 +120,15 @@ resource_group="test-rg-${region}"
 vnet_name="test-vnet-${region}"
 subnet_name="test-subnet-${region}"
 
-az group create --name "$resource_group" --location "$region"
+az group create --name "$resource_group" --location "$region" --output tsv
 
 az network vnet create \
   --name "$vnet_name" \
   --resource-group "$resource_group" \
   --address-prefixes "10.0.0.0/16" \
   --subnet-name "$subnet_name" \
-  --subnet-prefix "10.0.1.0/24"
+  --subnet-prefix "10.0.1.0/24" \
+  --output tsv
 
 zones=$(az vm list-skus --location "$region" --query "[?zones].{Zone:zones}" -o tsv | tr '\n' ' ')
 
@@ -150,6 +151,7 @@ for zone in $zones; do
         --zone "$zone" \
         --public-ip-address "" \
         --no-wait \
+        --output tsv \
       && job_statuses[$i]=success \
       || job_statuses[$i]=failure
     ) &
@@ -168,6 +170,6 @@ for zone in $zones; do
   echo "VMSize: $size, Zone $zone: Successfully created $success_count VMs, failed to create $failure_count VMs" >> /tmp/test_zones.log
 done
 
-az group delete --name "$resource_group" --yes --no-wait
+az group delete --name "$resource_group" --yes --no-wait --output tsv
 
 print_table "/tmp/test_zones.log"
