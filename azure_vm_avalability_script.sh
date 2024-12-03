@@ -168,14 +168,8 @@ main() {
  
   readarray -t zones < <(az vm list-skus --location "$region" --size "$size" --output json | jq -r '.[0].locationInfo[0].zones[]')
 
-  for zone in "${zones[@]}"; do
-  echo "zone: $zone"
-  done
-  exit
-
-
   rm -f /tmp/test_zones.log
- for zone in "${zones[@]}"; do
+  for zone in "${zones[@]}"; do
   success_count=0
   failure_count=0
   declare -A job_statuses
