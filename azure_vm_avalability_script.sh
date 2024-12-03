@@ -57,6 +57,7 @@ die() {
 parse_params() {
   region=''
   size=''
+  number_of_vms=''
 
   while :; do
     case "${1-}" in
@@ -112,48 +113,79 @@ print_table() {
     ' "$input_file" | column -t
 }
 
-parse_params "$@"
-setup_colors
-rm -f /tmp/test_zones.log
+create_resource_group() {
+  local resource_group=$1
+  local region=$2
+  az group create --name "$resource_group" --location "$region" --output tsv
+}
 
-resource_group="test-rg-${region}"
-vnet_name="test-vnet-${region}"
-subnet_name="test-subnet-${region}"
+create_vnet() {
+  local vnet_name=$1
+  local resource_group=$2
+  local subnet_name=$3
+  az network vnet create \
+    --name "$vnet_name" \
+    --resource-group "$resource_group" \
+    --address-prefixes "10.0.0.0/16" \
+    --subnet-name "$subnet_name" \
+    --subnet-prefix "10.0.1.0/24" \
+    --output tsv
+}
 
-az group create --name "$resource_group" --location "$region" --output tsv
+get_zones() {
+  local region=$1
+  local size=$2
+  zones=($(az vm list-skus --location "$region" --size "$size" --output json | jq -r '.[0].locationInfo[0].zones[]'))
+  echo "${zones[@]}"
+}
 
-az network vnet create \
-  --name "$vnet_name" \
-  --resource-group "$resource_group" \
-  --address-prefixes "10.0.0.0/16" \
-  --subnet-name "$subnet_name" \
-  --subnet-prefix "10.0.1.0/24" \
-  --output tsv
+create_vm() {
+  local vm_name=$1
+  local resource_group=$2
+  local region=$3
+  local size=$4
+  local vnet_name=$5
+  local subnet_name=$6
+  local zone=$7
+  az vm create \
+    --resource-group "$resource_group" \
+    --name "$vm_name" \
+    --location "$region" \
+    --size "$size" \
+    --image "CentOS85Gen2" \
+    --vnet-name "$vnet_name" \
+    --subnet "$subnet_name" \
+    --zone "$zone" \
+    --public-ip-address "" \
+    --no-wait \
+    --output tsv
+}
 
-zones=($(az vm list-skus --location eastus --size $size --output json | jq -r '.[0].locationInfo[0].zones[]'))
+main() {
+  parse_params "$@"
+  setup_colors
 
+  resource_group="test-rg-${region}"
+  vnet_name="test-vnet-${region}"
+  subnet_name="test-subnet-${region}"
 
-for zone in "${zones[@]}"; do
-  unset success_count failure_count job_statuses
-  success_count=0
-  failure_count=0
-  declare -A job_statuses
+  create_resource_group "$resource_group" "$region"
+  create_vnet "$vnet_name" "$resource_group" "$subnet_name"
+  
+  zones=$(get_zones "$region" "$size")
 
-  for i in $(seq 1 "$number_of_vms"); do
-    vm_name="vm-${zone}-${i}"
-    az vm create \
-        --resource-group "$resource_group" \
-        --name "$vm_name" \
-        --location "$region" \
-        --size "$size" \
-        --image "CentOS85Gen2" \
-        --vnet-name "$vnet_name" \
-        --subnet "$subnet_name" \
-        --zone "$zone" \
-        --public-ip-address "" \
-        --no-wait \
-        --output tsv
-	done
+  rm -f /tmp/test_zones.log
+  for zone in "${zones[@]}"; do
+    success_count=0
+    failure_count=0
+    declare -A job_statuses
+
+    for i in $(seq 1 "$number_of_vms"); do
+      vm_name="vm-${zone}-${i}"
+      create_vm "$vm_name" "$resource_group" "$region" "$size" "$vnet_name" "$subnet_name" "$zone" &
+      job_statuses[$!]="$vm_name"
+    done
+
     # Wait for all background jobs to complete
     for job in "${!job_statuses[@]}"; do
         if wait "$job"; then
@@ -163,9 +195,11 @@ for zone in "${zones[@]}"; do
         fi
     done
 
-  echo "VMSize: $size, Zone $zone: Successfully created $success_count VMs, failed to create $failure_count VMs" >> /tmp/test_zones.log
-done
+    echo "VMSize: $size, Zone $zone: Successfully created $success_count VMs, failed to create $failure_count VMs" >> /tmp/test_zones.log
+  done
 
-az group delete --name "$resource_group" --yes --no-wait --output tsv
+  az group delete --name "$resource_group" --yes --no-wait --output tsv
+  print_table "/tmp/test_zones.log"
+}
 
-print_table "/tmp/test_zones.log"
+main "$@"
