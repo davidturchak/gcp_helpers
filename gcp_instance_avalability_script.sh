@@ -93,6 +93,12 @@ parse_params() {
   return 0
 }
 
+validate_gcloud() {
+  if ! command -v gcloud &> /dev/null; then
+    die "gcloud is not installed. Please install gcloud to proceed."
+  fi
+}
+
 print_table() {
     local input_file="$1"
 
@@ -119,6 +125,7 @@ print_table() {
 
 parse_params "$@"
 setup_colors
+validate_gcloud
 rm -f /tmp/test_zones.log
 
 subnet_cidr="10.0.1.0/24"
@@ -149,13 +156,13 @@ for ctype in $instance_type; do
         echo "Processing zone: $zone"
         unset success_count failure_count job_statuses
 	success_count=0
-        failure_count=0
+  failure_count=0
 	declare -A job_statuses
 	for i in $(seq 1 "$number_of_vms"); do
     	    vm_name="vm-${zone}-${i}"
     	    gcloud compute instances create "$vm_name" \
         	--zone "$zone" \
-		--min-cpu-platform="$cpu_platform" \
+		      --min-cpu-platform="$cpu_platform" \
         	--machine-type "$ctype" \
         	--resource-policies="$sp_name" \
         	--network "$network_name" \
