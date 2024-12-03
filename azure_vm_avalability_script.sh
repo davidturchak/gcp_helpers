@@ -139,6 +139,8 @@ get_zones() {
   echo "${zones[@]}"
 }
 
+
+
 create_vm() {
   local vm_name=$1
   local resource_group=$2
@@ -175,28 +177,30 @@ main() {
   zones=$(get_zones "$region" "$size")
 
   rm -f /tmp/test_zones.log
-  for zone in "${zones[@]}"; do
-    success_count=0
-    failure_count=0
-    declare -A job_statuses
+ for zone in "${zones[@]}"; do
+ echo $zone
+ exit 1
+  success_count=0
+  failure_count=0
+  declare -A job_statuses
 
-    for i in $(seq 1 "$number_of_vms"); do
-      vm_name="vm-${zone}-${i}"
-      create_vm "$vm_name" "$resource_group" "$region" "$size" "$vnet_name" "$subnet_name" "$zone" &
-      job_statuses[$!]="$vm_name"
-    done
-
-    # Wait for all background jobs to complete
-    for job in "${!job_statuses[@]}"; do
-        if wait "$job"; then
-            success_count=$((success_count + 1))
-        else
-            failure_count=$((failure_count + 1))
-        fi
-    done
-
-    echo "VMSize: $size, Zone $zone: Successfully created $success_count VMs, failed to create $failure_count VMs" >> /tmp/test_zones.log
+  for i in $(seq 1 "$number_of_vms"); do
+    vm_name="vm-${zone}-${i}"
+    create_vm "$vm_name" "$resource_group" "$region" "$size" "$vnet_name" "$subnet_name" "$zone" &
+    job_statuses[$!]="$vm_name"
   done
+
+  # Wait for all background jobs to complete
+  for job in "${!job_statuses[@]}"; do
+      if wait "$job"; then
+          success_count=$((success_count + 1))
+      else
+          failure_count=$((failure_count + 1))
+      fi
+  done
+
+  echo "VMSize: $size, Zone $zone: Successfully created $success_count VMs, failed to create $failure_count VMs" >> /tmp/test_zones.log
+done
 
   az group delete --name "$resource_group" --yes --no-wait --output tsv
   print_table "/tmp/test_zones.log"
