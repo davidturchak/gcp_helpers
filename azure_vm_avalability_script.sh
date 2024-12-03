@@ -104,12 +104,18 @@ print_table() {
         print "VMSize\t\tZone\tCreatedVMs\tFailedVMs"
     }
     {
+        # Remove commas from the input data
+        gsub(",", "", $0)
+
+        # Extract fields
         for (i = 1; i <= NF; i++) {
             if ($i ~ /^VMSize:/) vm_size = $(i+1)
             if ($i ~ /^Zone:/) zone = $(i+1)
             if ($i ~ /^Successfully/) created_vms = $(i+2)
             if ($i ~ /^Failed/) failed_vms = $(i+3)
         }
+
+        # Print the results in the required format
         print vm_size "\t" zone "\t" created_vms "\t" failed_vms
     }' "$input_file" | column -t
 }
