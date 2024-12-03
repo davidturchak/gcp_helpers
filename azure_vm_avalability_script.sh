@@ -99,13 +99,13 @@ print_table() {
         return 1
     fi
 
-    awk -F', |: | ' '
+    awk -F',|:
     BEGIN {
         print "VMSize\tZone\tCreatedVMs\tFailedVMs"
     }
     {
-        size = $2
-        zone = $4
+        size = $0
+        zone = $1
         created_vms = $7
         failed_vms = $12
         print vm_size "\t" zone "\t" created_vms "\t" failed_vms
@@ -175,7 +175,7 @@ main() {
   declare -A job_statuses
 
   for i in $(seq 1 "$number_of_vms"); do
-    vm_name="vm-${zone}-${i}"
+    vm_name="vm-${region}z${zone}-${i}"
     create_vm "$vm_name" "$resource_group" "$region" "$size" "$vnet_name" "$subnet_name" "$zone" &
     job_statuses[$!]="$vm_name"
   done
@@ -189,7 +189,7 @@ main() {
       fi
   done
 
-  echo "VMSize: $size, Zone $zone: Successfully created $success_count VMs, failed to create $failure_count VMs" >> /tmp/test_zones.log
+  echo "VMSize: $size, Zone: $zone Successfully created: $success_count, Failed to create: $failure_count" >> /tmp/test_zones.log
 done
 
   az group delete --name "$resource_group" --yes --no-wait --output tsv
