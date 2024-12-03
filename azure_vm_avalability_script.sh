@@ -158,7 +158,7 @@ main() {
   parse_params "$@"
   setup_colors
 
-  resource_group="test-rg-${region}"
+  resource_group="test{$RANDOM}-rg-${region}"
   vnet_name="test-vnet-${region}"
   subnet_name="test-subnet-${region}"
 
