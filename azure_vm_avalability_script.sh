@@ -178,6 +178,7 @@ main() {
 
   rm -f /tmp/test_zones.log
   for zone in "${zones[@]}"; do
+  unset success_count failure_count job_statuses
   success_count=0
   failure_count=0
   declare -A job_statuses
