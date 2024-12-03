@@ -103,7 +103,7 @@ print_table() {
         print "VMSize\tZone\tCreatedVMs\tFailedVMs"
     }
     {
-        vm_size = $2
+        size = $2
         zone = $4
         created_vms = $7
         failed_vms = $12
@@ -130,7 +130,7 @@ az network vnet create \
   --subnet-prefix "10.0.1.0/24" \
   --output tsv
 
-zones=($(az vm list-skus --location eastus --size $vm_size --output json | jq -r '.[0].locationInfo[0].zones[]'))
+zones=($(az vm list-skus --location eastus --size $size --output json | jq -r '.[0].locationInfo[0].zones[]'))
 
 
 for zone in "${zones[@]}"; do
