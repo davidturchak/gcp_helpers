@@ -168,6 +168,7 @@ create_vm() {
     --zone "$zone" \
     --public-ip-address "" \
     --no-wait \
+    --accelerated-networking \
     --output tsv
 }
 
