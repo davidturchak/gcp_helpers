@@ -132,13 +132,6 @@ create_vnet() {
     --output tsv
 }
 
-get_zones() {
-  local region=$1
-  local size=$2
-  readarray -t zones < <(az vm list-skus --location "$region" --size "$size" --output json | jq -r '.[0].locationInfo[0].zones[]')
-  echo "${zones[@]}"
-}
-
 create_vm() {
   local vm_name=$1
   local resource_group=$2
@@ -172,7 +165,9 @@ main() {
   create_resource_group "$resource_group" "$region"
   create_vnet "$vnet_name" "$resource_group" "$subnet_name"
   
-  zones=$(get_zones "$region" "$size")
+ 
+  readarray -t zones < <(az vm list-skus --location "$region" --size "$size" --output json | jq -r '.[0].locationInfo[0].zones[]')
+
   for zone in "${zones[@]}"; do
   echo "zone: $zone"
   done
