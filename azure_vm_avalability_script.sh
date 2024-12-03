@@ -99,19 +99,21 @@ print_table() {
         return 1
     fi
 
-    awk -F',|:
+    awk '
     BEGIN {
-        print "VMSize\tZone\tCreatedVMs\tFailedVMs"
+        print "VMSize\t\tZone\tCreatedVMs\tFailedVMs"
     }
     {
-        size = $0
-        zone = $1
-        created_vms = $7
-        failed_vms = $12
+        for (i = 1; i <= NF; i++) {
+            if ($i ~ /^VMSize:/) vm_size = $(i+1)
+            if ($i ~ /^Zone:/) zone = $(i+1)
+            if ($i ~ /^Successfully/) created_vms = $(i+2)
+            if ($i ~ /^Failed/) failed_vms = $(i+3)
+        }
         print vm_size "\t" zone "\t" created_vms "\t" failed_vms
-    }
-    ' "$input_file" | column -t
+    }' "$input_file" | column -t
 }
+
 
 create_resource_group() {
   local resource_group=$1
