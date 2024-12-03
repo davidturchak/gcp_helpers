@@ -146,7 +146,7 @@ for zone in "${zones[@]}"; do
         --name "$vm_name" \
         --location "$region" \
         --size "$size" \
-        --image "UbuntuLTS" \
+        --image "CentOS85Gen2" \
         --vnet-name "$vnet_name" \
         --subnet "$subnet_name" \
         --zone "$zone" \
