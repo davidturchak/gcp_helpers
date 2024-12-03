@@ -135,7 +135,7 @@ create_vnet() {
 get_zones() {
   local region=$1
   local size=$2
-  zones=($(az vm list-skus --location "$region" --size "$size" --output json | jq -r '.[0].locationInfo[0].zones[]'))
+  zones=($(az vm list-skus --location "$region" --size "$size" --output json | jq -r '.[0].locationInfo[0].zones[]' | tr '\n' ' '))
   echo "${zones[@]}"
 }
 
