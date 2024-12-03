@@ -139,8 +139,6 @@ get_zones() {
   echo "${zones[@]}"
 }
 
-
-
 create_vm() {
   local vm_name=$1
   local resource_group=$2
@@ -149,6 +147,8 @@ create_vm() {
   local vnet_name=$5
   local subnet_name=$6
   local zone=$7
+  echo $zone
+  exit
   az vm create \
     --resource-group "$resource_group" \
     --name "$vm_name" \
@@ -178,8 +178,6 @@ main() {
 
   rm -f /tmp/test_zones.log
  for zone in "${zones[@]}"; do
- echo $zone
- exit 1
   success_count=0
   failure_count=0
   declare -A job_statuses
