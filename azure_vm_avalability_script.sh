@@ -159,7 +159,7 @@ create_proximity_placement_group() {
     --resource-group "$resource_group" \
     --location "$region" \
     --type "Standard" \
-    --zones "$zone" \
+    --zone "$zone" \
     --output tsv
 }
 
