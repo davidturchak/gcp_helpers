@@ -181,32 +181,6 @@ create_availability_set() {
 }
 
 
-create_vm() {
-  local vm_name=$1
-  local resource_group=$2
-  local region=$3
-  local size=$4
-  local vnet_name=$5
-  local subnet_name=$6
-  local ppg_name=$7
-  local as_name=$8
-  msg "Creating VM '$vm_name' in region '$region' with Proximity Placement Group '$ppg_name'..."
-  az vm create \
-    --resource-group "$resource_group" \
-    --name "$vm_name" \
-    --location "$region" \
-    --size "$size" \
-    --image "CentOS85Gen2" \
-    --vnet-name "$vnet_name" \
-    --subnet "$subnet_name" \
-    --admin-username silkus \
-    --ppg "$ppg_name" \
-    --public-ip-address "" \
-    --accelerated-networking \
-    --availability-set "$as_name" \
-    --no-wait \
-    --output tsv
-}
 
 main() {
   validate_jq
@@ -249,18 +223,33 @@ main() {
     msg "Starting VM creation in zone '$zone' using PPG '$ppg_name'..."
     for i in $(seq 1 "$number_of_vms"); do
       vm_name="vm-${region}-z${zone}-${i}"
-      create_vm "$vm_name" "$resource_group" "$region" "$size" "$vnet_name" "$subnet_name" "$ppg_name" "$as_name" &
-      job_statuses[$!]="$vm_name"
-    done
+      #create_vm "$vm_name" "$resource_group" "$region" "$size" "$vnet_name" "$subnet_name" "$ppg_name" "$as_name" &
+        msg "Creating VM '$vm_name' in region '$region' with Proximity Placement Group '$ppg_name'..."
+    az vm create \
+    --resource-group "$resource_group" \
+    --name "$vm_name" \
+    --location "$region" \
+    --size "$size" \
+    --image "CentOS85Gen2" \
+    --vnet-name "$vnet_name" \
+    --subnet "$subnet_name" \
+    --admin-username silkus \
+    --ppg "$ppg_name" \
+    --public-ip-address "" \
+    --accelerated-networking \
+    --availability-set "$as_name" \
+    --no-wait --output none &
+    job_statuses[$!]="$vm_name"
+   done
 
-    msg "Waiting for all VMs to be created in zone '$zone'..."
-    for job in "${!job_statuses[@]}"; do
-        if wait "$job"; then
-            success_count=$((success_count + 1))
-        else
-            failure_count=$((failure_count + 1))
-        fi
-    done
+  msg "Waiting for all VMs to be created in zone '$zone'..."
+  for job in "${!job_statuses[@]}"; do
+      if wait "$job"; then
+          success_count=$((success_count + 1))
+      else
+          failure_count=$((failure_count + 1))
+      fi
+  done
 
     msg "Finished VM creation in zone '$zone'. Success: $success_count, Failure: $failure_count."
     echo "VMSize: $size, Zone: $zone, Successfully created: $success_count, Failed to create: $failure_count" >> /tmp/test_zones.log
