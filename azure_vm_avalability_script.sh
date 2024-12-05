@@ -131,7 +131,7 @@ create_resource_group() {
   local resource_group=$1
   local region=$2
   msg "Creating resource group '$resource_group' in region '$region'..."
-  az group create --name "$resource_group" --location "$region" --output tsv
+  az group create --name "$resource_group" --location "$region" --output none
 }
 
 create_vnet() {
