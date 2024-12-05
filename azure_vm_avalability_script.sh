@@ -32,8 +32,6 @@ EOF
 
 cleanup() {
   trap - SIGINT SIGTERM ERR EXIT
-  msg "Cleaning up resources..."
-  az group delete --name "$resource_group" --yes --no-wait --output none || msg "Failed to delete resource group. Manual cleanup may be required."
 }
 
 setup_colors() {
