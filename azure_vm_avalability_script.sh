@@ -238,6 +238,7 @@ main() {
     --public-ip-address "" \
     --accelerated-networking \
     --availability-set "$as_name" \
+    --enable-secure-boot false \
     --output none &
     job_statuses[$!]="$vm_name"
    done
