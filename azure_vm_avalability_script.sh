@@ -187,6 +187,7 @@ create_vm() {
     --accelerated-networking \
     --output tsv
 }
+
 main() {
   validate_jq
   validate_az
@@ -196,18 +197,20 @@ main() {
   resource_group="test${RANDOM}-rg-${region}"
   vnet_name="test-vnet-${region}"
   subnet_name="test-subnet-${region}"
-  ppg_name="ppg-${region}-${RANDOM}"
 
-  msg "Creating resource group, virtual network, and Proximity Placement Group..."
+  msg "Creating resource group and virtual network..."
   create_resource_group "$resource_group" "$region"
   create_vnet "$vnet_name" "$resource_group" "$subnet_name"
 
   msg "Fetching available zones for region '$region' and VM size '$size'... (may be slow)"
   readarray -t zones < <(az vm list-skus --location "$region" --size "$size" --output json | jq -r '.[0].locationInfo[0].zones[]')
 
-  # Choose the first available zone for PPG creation
-  selected_zone="${zones[0]}"
-  create_proximity_placement_group "$ppg_name" "$resource_group" "$region" "$selected_zone"
+  declare -A ppg_map
+  for zone in "${zones[@]}"; do
+    ppg_name="ppg-${region}-z${zone}-${RANDOM}"
+    create_proximity_placement_group "$ppg_name" "$resource_group" "$region" "$zone"
+    ppg_map[$zone]="$ppg_name"
+  done
 
   rm -f /tmp/test_zones.log
   for zone in "${zones[@]}"; do
@@ -216,14 +219,15 @@ main() {
     failure_count=0
     declare -A job_statuses
 
-    msg "Starting VM creation using PPG..."
+    ppg_name="${ppg_map[$zone]}"
+    msg "Starting VM creation in zone '$zone' using PPG '$ppg_name'..."
     for i in $(seq 1 "$number_of_vms"); do
-      vm_name="vm-${region}-ppg-${i}"
+      vm_name="vm-${region}-z${zone}-${i}"
       create_vm "$vm_name" "$resource_group" "$region" "$size" "$vnet_name" "$subnet_name" "$ppg_name" &
       job_statuses[$!]="$vm_name"
     done
 
-    msg "Waiting for all VMs to be created..."
+    msg "Waiting for all VMs to be created in zone '$zone'..."
     for job in "${!job_statuses[@]}"; do
         if wait "$job"; then
             success_count=$((success_count + 1))
@@ -232,7 +236,7 @@ main() {
         fi
     done
 
-    msg "Finished VM creation using PPG. Success: $success_count, Failure: $failure_count."
+    msg "Finished VM creation in zone '$zone'. Success: $success_count, Failure: $failure_count."
     echo "VMSize: $size, Zone: $zone, Successfully created: $success_count, Failed to create: $failure_count" >> /tmp/test_zones.log
   done
 
