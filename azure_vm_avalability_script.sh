@@ -160,6 +160,7 @@ create_proximity_placement_group() {
     --location "$region" \
     --type "Standard" \
     --zone "$zone" \
+    --intent-vm-sizes "$size" \
     --output tsv
 }
 
