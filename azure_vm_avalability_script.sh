@@ -223,7 +223,8 @@ main() {
   create_vnet "$vnet_name" "$resource_group" "$subnet_name"
 
   msg "Fetching available zones for region '$region' and VM size '$size'... (may be slow)"
-  readarray -t zones < <(az vm list-skus --location "$region" --size "$size" --output json | jq -r '.[0].locationInfo[0].zones[]')
+  #readarray -t zones < <(az vm list-skus --location "$region" --size "$size" --output json | jq -r '.[0].locationInfo[0].zones[]')
+  zones[0]=1
 
   declare -A ppg_map
   declare -A as_map
