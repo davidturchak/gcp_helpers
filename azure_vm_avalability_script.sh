@@ -222,7 +222,7 @@ main() {
     msg "Starting VM creation in zone '$zone' using PPG '$ppg_name'..."
     for i in $(seq 1 "$number_of_vms"); do
       vm_name="vm-${region}-z${zone}-${i}"
-      msg "Creating VM '$vm_name' in region '$region' with Proximity Placement Group '$ppg_name'..."
+      #msg "Creating VM '$vm_name' in region '$region' with Proximity Placement Group '$ppg_name'..."
       az vm create \
       --resource-group "$resource_group" \
       --name "$vm_name" \
