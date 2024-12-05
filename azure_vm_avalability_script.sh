@@ -168,11 +168,13 @@ create_availability_set() {
   local as_name=$1
   local resource_group=$2
   local region=$3
+  local ppg_name=$4
   msg "Creating Availability Set '$as_name' in region '$region'..."
   az vm availability-set create \
     --name "$as_name" \
     --resource-group "$resource_group" \
     --location "$region" \
+    --ppg "$ppg_name" \
     --platform-fault-domain-count 3 \
     --platform-update-domain-count 20 \
     --output tsv
@@ -229,7 +231,7 @@ main() {
     ppg_name="ppg-${region}-z${zone}-${RANDOM}"
     as_name="as-${region}-z${zone}-${RANDOM}"
     create_proximity_placement_group "$ppg_name" "$resource_group" "$region" "$zone"
-    create_availability_set "$as_name" "$resource_group" "$region"
+    create_availability_set "$as_name" "$resource_group" "$region" "$ppg_name"
     ppg_map[$zone]="$ppg_name"
     as_map[$zone]="$as_name"
   done
