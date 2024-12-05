@@ -164,6 +164,21 @@ create_proximity_placement_group() {
     --output tsv
 }
 
+create_availability_set() {
+  local as_name=$1
+  local resource_group=$2
+  local region=$3
+  msg "Creating Availability Set '$av_name' in region '$region'..."
+  az vm availability-set create \
+    --name "$as_name" \
+    --resource-group "$resource_group" \
+    --location "$region" \
+    --platform-fault-domain-count 3 \
+    --platform-update-domain-count 20
+    --output tsv
+}
+
+
 create_vm() {
   local vm_name=$1
   local resource_group=$2
@@ -172,6 +187,7 @@ create_vm() {
   local vnet_name=$5
   local subnet_name=$6
   local ppg_name=$7
+  local as_name=$8
   msg "Creating VM '$vm_name' in region '$region' with Proximity Placement Group '$ppg_name'..."
   az vm create \
     --resource-group "$resource_group" \
@@ -184,8 +200,9 @@ create_vm() {
     --admin-username silkus \
     --ppg "$ppg_name" \
     --public-ip-address "" \
-    --no-wait \
     --accelerated-networking \
+    --availability-set "$as_name" \
+    --no-wait \
     --output tsv
 }
 
@@ -207,10 +224,14 @@ main() {
   readarray -t zones < <(az vm list-skus --location "$region" --size "$size" --output json | jq -r '.[0].locationInfo[0].zones[]')
 
   declare -A ppg_map
+  declare -A as_map
   for zone in "${zones[@]}"; do
     ppg_name="ppg-${region}-z${zone}-${RANDOM}"
+    as_name="as-${region}-z${zone}-${RANDOM}"
     create_proximity_placement_group "$ppg_name" "$resource_group" "$region" "$zone"
+    create_availability_set "$as_name" "$resource_group" "$region"
     ppg_map[$zone]="$ppg_name"
+    as_map[$zone]="$as_name"
   done
 
   rm -f /tmp/test_zones.log
@@ -221,10 +242,11 @@ main() {
     declare -A job_statuses
 
     ppg_name="${ppg_map[$zone]}"
+    as_name="${as_map[$zone]}"
     msg "Starting VM creation in zone '$zone' using PPG '$ppg_name'..."
     for i in $(seq 1 "$number_of_vms"); do
       vm_name="vm-${region}-z${zone}-${i}"
-      create_vm "$vm_name" "$resource_group" "$region" "$size" "$vnet_name" "$subnet_name" "$ppg_name" &
+      create_vm "$vm_name" "$resource_group" "$region" "$size" "$vnet_name" "$subnet_name" "$ppg_name" "$as_name" &
       job_statuses[$!]="$vm_name"
     done
 
