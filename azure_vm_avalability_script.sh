@@ -159,7 +159,6 @@ create_proximity_placement_group() {
     --name "$ppg_name" \
     --resource-group "$resource_group" \
     --location "$region" \
-    #--type "Standard" \
     --type "Ultra" \
     --zone "$zone" \
     --intent-vm-sizes "$size" \
