@@ -238,7 +238,7 @@ main() {
     --public-ip-address "" \
     --accelerated-networking \
     --availability-set "$as_name" \
-    --no-wait --output none &
+    --output none &
     job_statuses[$!]="$vm_name"
    done
 
