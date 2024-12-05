@@ -16,7 +16,7 @@ Usage: $(basename "${BASH_SOURCE[0]}") [-h] [-v] -r eastus -s Standard_D2s_v3 -n
 | Finally, it displays the success or failure results for each zone.                           | 
 |                                                                                              | 
 | Before running the script, ensure that the Azure CLI environment is preconfigured, including | 
-| the default subscription, account, and required permissions!                                 | 
+| the default subscription, account, JQ installed and required permissions!                                 | 
 +-----------------------------------------------------------------------------------------------+ 
 
 Available options:
@@ -32,7 +32,8 @@ EOF
 
 cleanup() {
   trap - SIGINT SIGTERM ERR EXIT
-  # script cleanup here
+  msg "Cleaning up resources..."
+  az group delete --name "$resource_group" --yes --no-wait --output none || msg "Failed to delete resource group. Manual cleanup may be required."
 }
 
 setup_colors() {
@@ -195,8 +196,8 @@ main() {
   create_vnet "$vnet_name" "$resource_group" "$subnet_name"
 
   msg "Fetching available zones for region '$region' and VM size '$size'... (may be slow)"
-  #readarray -t zones < <(az vm list-skus --location "$region" --size "$size" --output json | jq -r '.[0].locationInfo[0].zones[]')
-  zones[0]=1
+  readarray -t zones < <(az vm list-skus --location "$region" --size "$size" --output json | jq -r '.[0].locationInfo[0].zones[]')
+  #zones[0]=1
 
   declare -A ppg_map
   declare -A as_map
