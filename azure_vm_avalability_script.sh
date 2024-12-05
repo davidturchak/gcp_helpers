@@ -145,7 +145,7 @@ create_vnet() {
     --address-prefixes "10.0.0.0/16" \
     --subnet-name "$subnet_name" \
     --subnet-prefix "10.0.1.0/24" \
-    --output tsv
+    --output none
 }
 
 create_proximity_placement_group() {
@@ -161,7 +161,7 @@ create_proximity_placement_group() {
     --type "Standard" \
     --zone "$zone" \
     --intent-vm-sizes "$size" \
-    --output tsv
+    --output none
 }
 
 create_availability_set() {
@@ -177,10 +177,8 @@ create_availability_set() {
     --ppg "$ppg_name" \
     --platform-fault-domain-count 3 \
     --platform-update-domain-count 20 \
-    --output tsv
+    --output none
 }
-
-
 
 main() {
   validate_jq
@@ -223,26 +221,25 @@ main() {
     msg "Starting VM creation in zone '$zone' using PPG '$ppg_name'..."
     for i in $(seq 1 "$number_of_vms"); do
       vm_name="vm-${region}-z${zone}-${i}"
-      #create_vm "$vm_name" "$resource_group" "$region" "$size" "$vnet_name" "$subnet_name" "$ppg_name" "$as_name" &
-        msg "Creating VM '$vm_name' in region '$region' with Proximity Placement Group '$ppg_name'..."
-    az vm create \
-    --resource-group "$resource_group" \
-    --name "$vm_name" \
-    --location "$region" \
-    --size "$size" \
-    --image "CentOS85Gen2" \
-    --vnet-name "$vnet_name" \
-    --subnet "$subnet_name" \
-    --admin-username silkus \
-    --ppg "$ppg_name" \
-    --public-ip-address "" \
-    --accelerated-networking \
-    --availability-set "$as_name" \
-    --enable-secure-boot false \
-    --output none &
-    job_statuses[$!]="$vm_name"
+      msg "Creating VM '$vm_name' in region '$region' with Proximity Placement Group '$ppg_name'..."
+      az vm create \
+      --resource-group "$resource_group" \
+      --name "$vm_name" \
+      --location "$region" \
+      --size "$size" \
+      --image "CentOS85Gen2" \
+      --vnet-name "$vnet_name" \
+      --subnet "$subnet_name" \
+      --admin-username silkus \
+      --ppg "$ppg_name" \
+      --public-ip-address "" \
+      --accelerated-networking \
+      --availability-set "$as_name" \
+      --enable-secure-boot false \
+      --output none &
+      job_statuses[$!]="$vm_name"
    done
-
+  sleep 5
   msg "Waiting for all VMs to be created in zone '$zone'..."
   for job in "${!job_statuses[@]}"; do
       if wait "$job"; then
@@ -257,7 +254,7 @@ main() {
   done
 
   msg "Cleaning up by deleting resource group '$resource_group'..."
-  #az group delete --name "$resource_group" --yes --no-wait --output tsv
+  az group delete --name "$resource_group" --yes --no-wait --output tsv
   print_table "/tmp/test_zones.log"
 }
 
