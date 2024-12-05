@@ -174,7 +174,7 @@ create_availability_set() {
     --resource-group "$resource_group" \
     --location "$region" \
     --platform-fault-domain-count 3 \
-    --platform-update-domain-count 20
+    --platform-update-domain-count 20 \
     --output tsv
 }
 
