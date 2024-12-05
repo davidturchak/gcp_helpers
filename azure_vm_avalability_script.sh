@@ -168,7 +168,7 @@ create_availability_set() {
   local as_name=$1
   local resource_group=$2
   local region=$3
-  msg "Creating Availability Set '$av_name' in region '$region'..."
+  msg "Creating Availability Set '$as_name' in region '$region'..."
   az vm availability-set create \
     --name "$as_name" \
     --resource-group "$resource_group" \
