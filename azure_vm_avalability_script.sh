@@ -148,6 +148,21 @@ create_vnet() {
     --output tsv
 }
 
+create_proximity_placement_group() {
+  local ppg_name=$1
+  local resource_group=$2
+  local region=$3
+  local zone=$4
+  msg "Creating Proximity Placement Group '$ppg_name' in region '$region', zone '$zone'..."
+  az ppg create \
+    --name "$ppg_name" \
+    --resource-group "$resource_group" \
+    --location "$region" \
+    --type "Standard" \
+    --zones "$zone" \
+    --output tsv
+}
+
 create_vm() {
   local vm_name=$1
   local resource_group=$2
@@ -155,8 +170,8 @@ create_vm() {
   local size=$4
   local vnet_name=$5
   local subnet_name=$6
-  local zone=$7
-  msg "Creating VM '$vm_name' in region '$region', zone '$zone'..."
+  local ppg_name=$7
+  msg "Creating VM '$vm_name' in region '$region' with Proximity Placement Group '$ppg_name'..."
   az vm create \
     --resource-group "$resource_group" \
     --name "$vm_name" \
@@ -166,13 +181,12 @@ create_vm() {
     --vnet-name "$vnet_name" \
     --subnet "$subnet_name" \
     --admin-username silkus \
-    --zone "$zone" \
+    --ppg "$ppg_name" \
     --public-ip-address "" \
     --no-wait \
     --accelerated-networking \
     --output tsv
 }
-
 main() {
   validate_jq
   validate_az
@@ -182,13 +196,18 @@ main() {
   resource_group="test${RANDOM}-rg-${region}"
   vnet_name="test-vnet-${region}"
   subnet_name="test-subnet-${region}"
+  ppg_name="ppg-${region}-${RANDOM}"
 
-  msg "Creating resource group and virtual network..."
+  msg "Creating resource group, virtual network, and Proximity Placement Group..."
   create_resource_group "$resource_group" "$region"
   create_vnet "$vnet_name" "$resource_group" "$subnet_name"
-  
-  msg "Fetching available zones for region '$region' and VM size '$size'..."
+
+  msg "Fetching available zones for region '$region' and VM size '$size'... (may be slow)"
   readarray -t zones < <(az vm list-skus --location "$region" --size "$size" --output json | jq -r '.[0].locationInfo[0].zones[]')
+
+  # Choose the first available zone for PPG creation
+  selected_zone="${zones[0]}"
+  create_proximity_placement_group "$ppg_name" "$resource_group" "$region" "$selected_zone"
 
   rm -f /tmp/test_zones.log
   for zone in "${zones[@]}"; do
@@ -197,10 +216,10 @@ main() {
     failure_count=0
     declare -A job_statuses
 
-    msg "Starting VM creation in zone '$zone'..."
+    msg "Starting VM creation using PPG..."
     for i in $(seq 1 "$number_of_vms"); do
-      vm_name="vm-${region}-z${zone}-${i}"
-      create_vm "$vm_name" "$resource_group" "$region" "$size" "$vnet_name" "$subnet_name" "$zone" &
+      vm_name="vm-${region}-ppg-${i}"
+      create_vm "$vm_name" "$resource_group" "$region" "$size" "$vnet_name" "$subnet_name" "$ppg_name" &
       job_statuses[$!]="$vm_name"
     done
 
@@ -213,7 +232,7 @@ main() {
         fi
     done
 
-    msg "Finished VM creation in zone '$zone'. Success: $success_count, Failure: $failure_count."
+    msg "Finished VM creation using PPG. Success: $success_count, Failure: $failure_count."
     echo "VMSize: $size, Zone: $zone, Successfully created: $success_count, Failed to create: $failure_count" >> /tmp/test_zones.log
   done
 
