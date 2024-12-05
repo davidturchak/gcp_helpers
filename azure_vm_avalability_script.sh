@@ -264,7 +264,7 @@ main() {
   done
 
   msg "Cleaning up by deleting resource group '$resource_group'..."
-  az group delete --name "$resource_group" --yes --no-wait --output tsv
+  #az group delete --name "$resource_group" --yes --no-wait --output tsv
   print_table "/tmp/test_zones.log"
 }
 
