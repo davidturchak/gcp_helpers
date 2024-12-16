@@ -166,18 +166,32 @@ for ctype in $instance_type; do
 	success_count=0
   failure_count=0
 	declare -A job_statuses
-	for i in $(seq 1 "$number_of_vms"); do
-    	    vm_name="vm-${zone}-${i}"
-    	    gcloud compute instances create "$vm_name" \
-        	--zone "$zone" \
-		      --min-cpu-platform="$cpu_platform" \
-        	--machine-type "$ctype" \
-        	--resource-policies="$sp_name" \
-        	--network "$network_name" \
-        	--no-address \
-        	--subnet "$subnet_name" --quiet &
-    		job_statuses[$!]="$vm_name"
-	done
+        # Add local SSDs if the role is 'dnode'
+        if [[ "$role" == "dnode" ]]; then
+            gcloud compute instances create "$vm_name" \
+                --zone "$zone" \
+                --min-cpu-platform="$cpu_platform" \
+                --machine-type "$ctype" \
+                --resource-policies="$sp_name" \
+                --network "$network_name" \
+                --no-address \
+                --subnet "$subnet_name" \
+                --local-ssd=interface=NVME \
+                --local-ssd=interface=NVME \
+                --local-ssd=interface=NVME \
+                --local-ssd=interface=NVME \
+                --quiet &
+        else
+            gcloud compute instances create "$vm_name" \
+                --zone "$zone" \
+                --min-cpu-platform="$cpu_platform" \
+                --machine-type "$ctype" \
+                --resource-policies="$sp_name" \
+                --network "$network_name" \
+                --no-address \
+                --subnet "$subnet_name" \
+                --quiet &
+        fi
         # Wait for all background jobs to complete
         for job in "${!job_statuses[@]}"; do
             if wait "$job"; then
