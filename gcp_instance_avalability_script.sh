@@ -148,11 +148,11 @@ for ctype in $instance_type; do
        if [[ ${ctype:0:1} == "n" ]]; then 
 	      cpu_platform="AMD Rome"
        elif [[ ${ctype:0:1} == "c" ]]; then
-         if [[ ${ctype:1:1} == "2" ]] then
+         if [[ ${ctype:1:1} == "2" ]]; then
           cpu_platform="AMD Milan"
          else
 	        cpu_platform="AMD Genoa"
-        fi
+         fi
        else 
 	echo "Unknown instance type - need to implement a cpu_platform"
 	exit 1
