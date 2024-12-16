@@ -2,6 +2,8 @@
 
 set -Euo pipefail
 trap cleanup SIGINT SIGTERM ERR EXIT
+randomizer=${RANDOM}
+results_file="/tmp/${randomizer}_test_zones.log"
 
 script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd -P)
 
@@ -208,7 +210,7 @@ main() {
     as_map[$zone]="$as_name"
   done
 
-  rm -f /tmp/test_zones.log
+  rm -f "${results_file}"
   for zone in "${zones[@]}"; do
     unset success_count failure_count job_statuses
     success_count=0
@@ -249,12 +251,12 @@ main() {
   done
 
     msg "Finished VM creation in zone '$zone'. Success: $success_count, Failure: $failure_count."
-    echo "VMSize: $size, Zone: $zone, Successfully created: $success_count, Failed to create: $failure_count" >> /tmp/test_zones.log
+    echo "VMSize: $size, Zone: $zone, Successfully created: $success_count, Failed to create: $failure_count" >> "${results_file}"
   done
 
   msg "Cleaning up by deleting resource group '$resource_group'..."
   az group delete --name "$resource_group" --yes --no-wait --output none
-  print_table "/tmp/test_zones.log"
+  print_table "${results_file}"
 }
 
 main "$@"
