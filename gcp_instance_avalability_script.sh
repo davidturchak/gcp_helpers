@@ -160,12 +160,14 @@ for ctype in $instance_type; do
   gcloud compute networks subnets create "$subnet_name" --network "$network_name" --region "$region" --range "$subnet_cidr"
   gcloud compute resource-policies create group-placement $sp_name --availability-domain-count=8 --region="$region"
 
-    for zone in $(gcloud compute zones list --filter="region:($region)" --format="value(name)"); do
-        echo "Processing zone: $zone"
-        unset success_count failure_count job_statuses
-	success_count=0
-  failure_count=0
-	declare -A job_statuses
+for zone in $(gcloud compute zones list --filter="region:($region)" --format="value(name)"); do
+    echo "Processing zone: $zone"
+    unset success_count failure_count job_statuses
+    success_count=0
+    failure_count=0
+    declare -A job_statuses
+    for i in $(seq 1 "$number_of_vms"); do
+        vm_name="vm-${zone}-${i}"      
         # Add local SSDs if the role is 'dnode'
         if [[ "$role" == "dnode" ]]; then
             gcloud compute instances create "$vm_name" \
@@ -192,18 +194,23 @@ for ctype in $instance_type; do
                 --subnet "$subnet_name" \
                 --quiet &
         fi
-        # Wait for all background jobs to complete
-        for job in "${!job_statuses[@]}"; do
-            if wait "$job"; then
-                success_count=$((success_count + 1))
-            else
-                failure_count=$((failure_count + 1))
-            fi
-        done
-        echo "InstanceType: $ctype, Zone $zone: Successfully created $success_count VMs, failed to create $failure_count VMs" >> /tmp/test_zones.log
-	gcloud compute instances delete $(seq -f "vm-${zone}-%g" 1 $number_of_vms) --zone "$zone" --quiet
-
+        
+        job_statuses[$!]="$vm_name"
     done
+
+    # Wait for all background jobs to complete
+    for job in "${!job_statuses[@]}"; do
+        if wait "$job"; then
+            success_count=$((success_count + 1))
+        else
+            failure_count=$((failure_count + 1))
+        fi
+    done
+    
+    echo "InstanceType: $ctype, Zone $zone: Successfully created $success_count VMs, failed to create $failure_count VMs" >> /tmp/test_zones.log
+    gcloud compute instances delete $(seq -f "vm-${zone}-%g" 1 $number_of_vms) --zone "$zone" --quiet
+done
+
     gcloud compute networks subnets delete "$subnet_name" --region "$region" --quiet
     gcloud compute networks delete $network_name --quiet
     gcloud compute resource-policies delete "$sp_name" --region "$region"
