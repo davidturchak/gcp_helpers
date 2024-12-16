@@ -4,6 +4,8 @@ set -Euo pipefail
 trap cleanup SIGINT SIGTERM ERR EXIT
 
 script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd -P)
+randomizer=${RANDOM}
+results_file="/tmp/${randomizer}_test_zones.log"
 
 usage() {
   cat <<EOF
@@ -134,13 +136,12 @@ print_table() {
 parse_params "$@"
 setup_colors
 validate_gcloud
-rm -f /tmp/test_zones.log
+rm -f ${results_file}
 
 subnet_cidr="10.0.1.0/24"
 network_name="test-net-${RANDOM}-${region}"
 
 for ctype in $instance_type; do
-    randomizer=${RANDOM}
     echo "Processing region: ${region}"
     subnet_name="test-sub-${randomizer}-${region}"
     sp_name="test-sp-${randomizer}-${region}"
@@ -213,7 +214,7 @@ for zone in $(gcloud compute zones list --filter="region:($region)" --format="va
         fi
     done
     
-    echo "InstanceType: $ctype, Zone $zone: Successfully created $success_count VMs, failed to create $failure_count VMs" >> /tmp/test_zones.log
+    echo "InstanceType: $ctype, Zone $zone: Successfully created $success_count VMs, failed to create $failure_count VMs" >> ${results_file}
     gcloud compute instances delete $(seq -f "${vm_name_pref}-%g" 1 $number_of_vms) --zone "$zone" --quiet
 done
 
@@ -221,4 +222,4 @@ done
     gcloud compute networks delete "$network_name" --quiet
     gcloud compute resource-policies delete "$sp_name" --region "$region"
     done
-print_table "/tmp/test_zones.log"
+print_table ${results_file}
