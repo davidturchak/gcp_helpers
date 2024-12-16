@@ -7,7 +7,7 @@ script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd -P)
 
 usage() {
   cat <<EOF
-Usage: $(basename "${BASH_SOURCE[0]}") [-h] [-v] -r us-east4 -i n2d-standard-2 -n 1
+Usage: $(basename "${BASH_SOURCE[0]}") [-h] [-v] -r us-east4 -i n2d-standard-2 -n 1 --role [dnode|cnode]
 
 +-----------------------------------------------------------------------------------------------+
 | This script is intended to test virtual machine creation in a specified region.              |
@@ -23,8 +23,9 @@ Available options:
 
 -h, --help      Print this help and exit
 -i, --instance-type  Instance type to use (Example: c3d-standard-8) 
--n, --number_of_vms   Number of vms to create
+-n, --number_of_vms   Number of VMs to create
 -r, --region    Google cloud region (Example: us-east4)
+--role          Role to assign (must be 'dnode' or 'cnode')
 -v, --verbose   Print script debug info
 EOF
   exit
@@ -54,11 +55,11 @@ die() {
   exit "$code"
 }
 
-
 parse_params() {
   # default values of variables set from params
   region=''
   instance_type=''
+  role=''
 
   while :; do
     case "${1-}" in
@@ -77,6 +78,10 @@ parse_params() {
       number_of_vms="${2-}"
       shift
       ;;
+    --role)
+      role="${2-}"
+      shift
+      ;;
     -?*) die "Unknown option: $1" ;;
     *) break ;;
     esac
@@ -89,6 +94,10 @@ parse_params() {
   [[ -z "${region-}" ]] && die "Missing required parameter: region"
   [[ -z "${instance_type-}" ]] && die "Missing required parameter: instance type"
   [[ -z "${number_of_vms-}" ]] && die "Missing required parameter: number_of_vms"
+  [[ -z "${role-}" ]] && die "Missing required parameter: role"
+  if [[ "${role}" != "dnode" && "${role}" != "cnode" ]]; then
+    die "Invalid value for --role. Allowed values are 'dnode' or 'cnode'."
+  fi
 
   return 0
 }
@@ -121,7 +130,6 @@ print_table() {
     }
     ' "$input_file" | column -t
 }
-
 
 parse_params "$@"
 setup_colors
