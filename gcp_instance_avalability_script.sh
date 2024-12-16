@@ -137,12 +137,14 @@ validate_gcloud
 rm -f /tmp/test_zones.log
 
 subnet_cidr="10.0.1.0/24"
-network_name="test-net-${region}"
+network_name="test-net-${RANDOM}-${region}"
 
 for ctype in $instance_type; do
-    echo "Processing region: $region"
-    subnet_name="test-sub-$region"
-    sp_name="test-sp-$region"
+    randomizer=${RANDOM}
+    echo "Processing region: ${region}"
+    subnet_name="test-sub-${randomizer}-${region}"
+    sp_name="test-sp-${randomizer}-${region}"
+    vm_name_pref="vm-${randomizer}-${region}"
 
     if [[ ${ctype:2:1} == "d" ]]; then
        if [[ ${ctype:0:1} == "n" ]]; then 
@@ -171,7 +173,7 @@ for zone in $(gcloud compute zones list --filter="region:($region)" --format="va
     failure_count=0
     declare -A job_statuses
     for i in $(seq 1 "$number_of_vms"); do
-        vm_name="vm-${zone}-${i}"      
+        vm_name="${vm_name_pref}-${i}"      
         # Add local SSDs if the role is 'dnode'
         if [[ "$role" == "dnode" ]]; then
             gcloud compute instances create "$vm_name" \
@@ -212,11 +214,11 @@ for zone in $(gcloud compute zones list --filter="region:($region)" --format="va
     done
     
     echo "InstanceType: $ctype, Zone $zone: Successfully created $success_count VMs, failed to create $failure_count VMs" >> /tmp/test_zones.log
-    gcloud compute instances delete $(seq -f "vm-${zone}-%g" 1 $number_of_vms) --zone "$zone" --quiet
+    gcloud compute instances delete $(seq -f "${vm_name_pref}-%g" 1 $number_of_vms) --zone "$zone" --quiet
 done
 
     gcloud compute networks subnets delete "$subnet_name" --region "$region" --quiet
-    gcloud compute networks delete $network_name --quiet
+    gcloud compute networks delete "$network_name" --quiet
     gcloud compute resource-policies delete "$sp_name" --region "$region"
     done
 print_table "/tmp/test_zones.log"
