@@ -92,9 +92,9 @@ parse_params() {
 
   # check required params and arguments
   [[ -z "${region-}" ]] && die "Missing required parameter: region"
-  [[ -z "${instance_type-}" ]] && die "Missing required parameter: instance type"
-  [[ -z "${number_of_vms-}" ]] && die "Missing required parameter: number_of_vms"
-  [[ -z "${role-}" ]] && die "Missing required parameter: role"
+  [[ -z "${instance_type-}" ]] && die "Missing required parameter: --instance type"
+  [[ -z "${number_of_vms-}" ]] && die "Missing required parameter: --number_of_vms"
+  [[ -z "${role-}" ]] && die "Missing required parameter: --role"
   if [[ "${role}" != "dnode" && "${role}" != "cnode" ]]; then
     die "Invalid value for --role. Allowed values are 'dnode' or 'cnode'."
   fi
