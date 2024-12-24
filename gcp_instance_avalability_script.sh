@@ -173,7 +173,7 @@ for ctype in $instance_type; do
   gcloud compute networks subnets create "$subnet_name" --network "$network_name" --region "$region" --range "$subnet_cidr"
   gcloud compute resource-policies create group-placement $sp_name --availability-domain-count=8 --region="$region"
 
-for zone in $(gcloud compute zones list --filter="region:($region)" --format="value(name)"); do
+for zone in $(gcloud compute zones list --filter="region=$region" --format="value(name)"); do
     echo "Processing zone: $zone"
     unset success_count failure_count job_statuses
     success_count=0
