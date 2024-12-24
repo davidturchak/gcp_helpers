@@ -169,13 +169,11 @@ for ctype in $instance_type; do
         elif [[ ${ctype:0:1} == "n" && ${ctype:1:1} == "2" ]]; then
             cpu_platform="Intel Ice Lake"
         else
-            echo "Unknown instance type: $ctype"
+            echo "Unknown instance type: $ctype ... Missing implementation!"
             exit 1
         fi
     fi
-
     echo "Selected CPU platform for $ctype: $cpu_platform"
-    exit
 done
 
   gcloud compute networks create "$network_name" --subnet-mode=custom
