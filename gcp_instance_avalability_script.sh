@@ -23,12 +23,13 @@ Usage: $(basename "${BASH_SOURCE[0]}") [-h] [-v] -r us-east4 -i n2d-standard-2 -
 
 Available options:
 
--h, --help      Print this help and exit
+-h, --help           Print this help and exit
 -i, --instance-type  Instance type to use (Example: c3d-standard-8) 
--n, --number_of_vms   Number of VMs to create
--r, --region    Google cloud region (Example: us-east4)
---role          Role to assign (must be 'dnode' or 'cnode')
--v, --verbose   Print script debug info
+-n, --number_of_vms  Number of VMs to create
+-r, --region         Google cloud region (Example: us-east4)
+--role               Role to assign (must be 'dnode' or 'cnode')
+--num_lssds          Number of lssds to attch in case of dnode role. (default 0)
+-v, --verbose        Print script debug info
 EOF
   exit
 }
@@ -62,6 +63,7 @@ parse_params() {
   region=''
   instance_type=''
   role=''
+  num_lssds=0 # Default to 0 if not provided
 
   while :; do
     case "${1-}" in
@@ -82,6 +84,10 @@ parse_params() {
       ;;
     --role)
       role="${2-}"
+      shift
+      ;;
+    --num_lssds)
+      num_lssds="${2-}"
       shift
       ;;
     -?*) die "Unknown option: $1" ;;
@@ -174,7 +180,11 @@ for zone in $(gcloud compute zones list --filter="region:($region)" --format="va
     failure_count=0
     declare -A job_statuses
     for i in $(seq 1 "$number_of_vms"); do
-        vm_name="${vm_name_pref}-${i}"      
+        vm_name="${vm_name_pref}-${i}"   
+        local_ssd_args=()
+        for _ in $(seq 1 "$num_lssds"); do
+            local_ssd_args+=("--local-ssd=interface=NVME")
+        done   
         # Add local SSDs if the role is 'dnode'
         if [[ "$role" == "dnode" ]]; then
             gcloud compute instances create "$vm_name" \
@@ -185,10 +195,7 @@ for zone in $(gcloud compute zones list --filter="region:($region)" --format="va
                 --network "$network_name" \
                 --no-address \
                 --subnet "$subnet_name" \
-                --local-ssd=interface=NVME \
-                --local-ssd=interface=NVME \
-                --local-ssd=interface=NVME \
-                --local-ssd=interface=NVME \
+                "${local_ssd_args[@]}" \
                 --quiet &
         else
             gcloud compute instances create "$vm_name" \
