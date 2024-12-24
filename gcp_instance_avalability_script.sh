@@ -132,7 +132,6 @@ print_table() {
 }
 
 parse_params "$@"
-setup_colors
 validate_gcloud
 rm -f ${results_file}
 
