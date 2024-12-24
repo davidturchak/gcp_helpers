@@ -39,14 +39,6 @@ cleanup() {
   # script cleanup here
 }
 
-setup_colors() {
-  if [[ -t 2 ]] && [[ -z "${NO_COLOR-}" ]] && [[ "${TERM-}" != "dumb" ]]; then
-    NOFORMAT='\033[0m' RED='\033[0;31m' GREEN='\033[0;32m' ORANGE='\033[0;33m' BLUE='\033[0;34m' PURPLE='\033[0;35m' CYAN='\033[0;36m' YELLOW='\033[1;33m'
-  else
-    NOFORMAT='' RED='' GREEN='' ORANGE='' BLUE='' PURPLE='' CYAN='' YELLOW=''
-  fi
-}
-
 msg() {
   echo >&2 -e "${1-}"
 }
@@ -175,8 +167,8 @@ for ctype in $instance_type; do
         exit 1
         fi
     fi
-    echo "Selected CPU platform for $ctype: $cpu_platform"
-done
+
+echo "Selected CPU platform for $ctype: $cpu_platform"
 
   gcloud compute networks create "$network_name" --subnet-mode=custom
   gcloud compute networks subnets create "$subnet_name" --network "$network_name" --region "$region" --range "$subnet_cidr"
