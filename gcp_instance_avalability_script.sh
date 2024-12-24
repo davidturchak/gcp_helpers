@@ -156,7 +156,7 @@ for ctype in $instance_type; do
         fi
     else
         if [[ ${ctype:0:1} == "c" && ${ctype:1:1} == "2" ]]; then
-            cpu_platform="Cascade Lake"
+            cpu_platform="Intel Cascade Lake"
         elif [[ ${ctype:0:1} == "n" && ${ctype:1:1} == "2" ]]; then
             cpu_platform="Intel Ice Lake"
         elif [[ ${ctype:0:1} == "n" && ${ctype:1:1} == "4" ]]; then
