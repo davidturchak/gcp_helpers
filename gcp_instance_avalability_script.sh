@@ -195,7 +195,6 @@ for zone in $(gcloud compute zones list --filter="region=$region" --format="valu
                 --network "$network_name" \
                 --no-address \
                 --subnet "$subnet_name" \
-                --dns "zones=$zone" \
                 "${local_ssd_args[@]}" \
                 --quiet &
         else
