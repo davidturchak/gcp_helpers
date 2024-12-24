@@ -168,9 +168,11 @@ for ctype in $instance_type; do
             cpu_platform="Cascade Lake"
         elif [[ ${ctype:0:1} == "n" && ${ctype:1:1} == "2" ]]; then
             cpu_platform="Intel Ice Lake"
+        elif [[ ${ctype:0:1} == "n" && ${ctype:1:1} == "4" ]]; then
+            cpu_platform="Intel Emerald Rapids"
         else
-            echo "Unknown instance type: $ctype ... Missing implementation!"
-            exit 1
+        echo "Unknown instance type: $ctype ... Missing implementation!"
+        exit 1
         fi
     fi
     echo "Selected CPU platform for $ctype: $cpu_platform"
