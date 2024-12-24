@@ -167,7 +167,12 @@ for ctype in $instance_type; do
 	exit 1
        fi
     else
-       cpu_platform="Intel Ice Lake"
+       if [[ ${ctype:0:1} == "c" && ${ctype:1:1} == "2" ]]; then
+          cpu_platform="Cascade Lake"
+       fi
+       if [[ ${ctype:0:1} == "n" && ${ctype:1:1} == "2" ]]; then
+          cpu_platform="Intel Ice Lake"
+       fi
     fi
   gcloud compute networks create "$network_name" --subnet-mode=custom
   gcloud compute networks subnets create "$subnet_name" --network "$network_name" --region "$region" --range "$subnet_cidr"
