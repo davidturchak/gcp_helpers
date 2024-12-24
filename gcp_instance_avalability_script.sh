@@ -154,26 +154,30 @@ for ctype in $instance_type; do
     vm_name_pref="vm-${randomizer}-${region}"
 
     if [[ ${ctype:2:1} == "d" ]]; then
-       if [[ ${ctype:0:1} == "n" ]]; then 
-	      cpu_platform="AMD Rome"
-       elif [[ ${ctype:0:1} == "c" ]]; then
-         if [[ ${ctype:1:1} == "2" ]]; then
-          cpu_platform="AMD Milan"
-         else
-	        cpu_platform="AMD Genoa"
-         fi
-       else 
-	echo "Unknown instance type - need to implement a cpu_platform"
-	exit 1
-       fi
+        if [[ ${ctype:0:1} == "n" ]]; then 
+            cpu_platform="AMD Rome"
+        elif [[ ${ctype:0:1} == "c" ]]; then
+            if [[ ${ctype:1:1} == "2" ]]; then
+                cpu_platform="AMD Milan"
+            else
+                cpu_platform="AMD Genoa"
+            fi
+        fi
     else
-       if [[ ${ctype:0:1} == "c" && ${ctype:1:1} == "2" ]]; then
-          cpu_platform="Cascade Lake"
-       fi
-       if [[ ${ctype:0:1} == "n" && ${ctype:1:1} == "2" ]]; then
-          cpu_platform="Intel Ice Lake"
-       fi
+        if [[ ${ctype:0:1} == "c" && ${ctype:1:1} == "2" ]]; then
+            cpu_platform="Cascade Lake"
+        elif [[ ${ctype:0:1} == "n" && ${ctype:1:1} == "2" ]]; then
+            cpu_platform="Intel Ice Lake"
+        else
+            echo "Unknown instance type: $ctype"
+            exit 1
+        fi
     fi
+
+    echo "Selected CPU platform for $ctype: $cpu_platform"
+    exit
+done
+
   gcloud compute networks create "$network_name" --subnet-mode=custom
   gcloud compute networks subnets create "$subnet_name" --network "$network_name" --region "$region" --range "$subnet_cidr"
   gcloud compute resource-policies create group-placement $sp_name --availability-domain-count=8 --region="$region"
