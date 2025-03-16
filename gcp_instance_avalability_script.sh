@@ -144,32 +144,59 @@ for ctype in $instance_type; do
     sp_name="test-sp-${randomizer}-${region}"
     vm_name_pref="vm-${randomizer}-${region}"
 
-    if [[ ${ctype:2:1} == "d" ]]; then
-        if [[ ${ctype:0:1} == "n" ]]; then
-            cpu_platform="AMD Rome"
-        elif [[ ${ctype:0:1} == "c" ]]; then
-            if [[ ${ctype:1:1} == "2" ]]; then
-                cpu_platform="AMD Milan"
-            elif [[ ${ctype:1:1} == "3" ]]; then
-                cpu_platform="AMD Genoa"
-            elif [[ ${ctype:1:1} == "4" ]]; then
-                cpu_platform="Automatic"
-            else
+    # Determine the CPU platform based on the instance type
+
+    # Extract key characters from ctype for clarity
+    ctype_prefix=${ctype:0:1}  # First character
+    ctype_mid=${ctype:1:1}    # Second character
+    ctype_suffix=${ctype:2:1} # Third character
+
+    # Check for "d" in the third character (AMD-based platforms)
+    if [[ $ctype_suffix == "d" ]]; then
+        case $ctype_prefix in
+            "n")
+                cpu_platform="AMD Rome"
+                ;;
+            "c")
+                case $ctype_mid in
+                    "2")
+                        cpu_platform="AMD Milan"
+                        ;;
+                    "3")
+                        cpu_platform="AMD Genoa"
+                        ;;
+                    "4")
+                        cpu_platform="Automatic"
+                        ;;
+                    *)
+                        echo "Unknown instance type: $ctype ... Missing implementation!"
+                        exit 1
+                        ;;
+                esac
+                ;;
+            *)
                 echo "Unknown instance type: $ctype ... Missing implementation!"
                 exit 1
-            fi
-        fi
+                ;;
+        esac
+
+    # Otherwise, handle Intel-based platforms
     else
-        if [[ ${ctype:0:1} == "c" && ${ctype:1:1} == "2" ]]; then
-            cpu_platform="Intel Cascade Lake"
-        elif [[ ${ctype:0:1} == "n" && ${ctype:1:1} == "2" ]]; then
-            cpu_platform="Intel Ice Lake"
-        elif [[ ${ctype:0:1} == "n" && ${ctype:1:1} == "4" ]]; then
-            cpu_platform="Intel Emerald Rapids"
-        else
-        echo "Unknown instance type: $ctype ... Missing implementation!"
-        exit 1
-        fi
+        case "${ctype_prefix}${ctype_mid}" in
+            "c2")
+                cpu_platform="Intel Cascade Lake"
+                ;;
+            "n2")
+                cpu_platform="Intel Ice Lake"
+                ;;
+            "n4")
+                cpu_platform="Intel Emerald Rapids"
+                ;;
+            *)
+                echo "Unknown instance type: $ctype ... Missing implementation!"
+                exit 1
+                ;;
+        esac
     fi
 
 echo "Selected CPU platform for $ctype: $cpu_platform"
