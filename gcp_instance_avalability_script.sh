@@ -150,10 +150,10 @@ for ctype in $instance_type; do
         elif [[ ${ctype:0:1} == "c" ]]; then
             if [[ ${ctype:1:1} == "2" ]]; then
                 cpu_platform="AMD Milan"
-            elif [[ ${ctype:1:1} == "4" ]]; then
-                cpu_platform="AMD turin"
-            else
+            elif [[ ${ctype:1:1} == "3" ]]; then
                 cpu_platform="AMD Genoa"
+            else
+                cpu_platform="Automatic"
             fi
         fi
     else
