@@ -189,11 +189,8 @@ for ctype in $instance_type; do
             "n2")
                 cpu_platform="Intel Ice Lake"
                 ;;
-            "n4")
+            "n4"|"c4")
                 cpu_platform="Intel Emerald Rapids"
-                ;;
-            "c4")
-                cpu_platform="Automatic"
                 ;;
             *)
                 echo "Unknown instance type: $ctype ... Missing implementation!"
