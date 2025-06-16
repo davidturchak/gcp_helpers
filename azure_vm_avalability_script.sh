@@ -118,9 +118,9 @@ print_table() {
     return 1
   fi
 
-  awk '
+  awk -v region="$region" '
   BEGIN {
-    print "VMSize\t\tZone\tCreatedVMs\tFailedVMs"
+    print "VMSize\t\tZone\t\tCreatedVMs\tFailedVMs"
   }
   {
     gsub(",", "", $0)
@@ -130,9 +130,10 @@ print_table() {
       if ($i ~ /^Successfully/) created_vms = $(i+2)
       if ($i ~ /^Failed/) failed_vms = $(i+3)
     }
-    print vm_size "\t" zone "\t" created_vms "\t" failed_vms
+    print vm_size "\t" region "-" zone "\t" created_vms "\t" failed_vms
   }' "$input_file" | column -t
 }
+
 
 create_resource_group() {
   local resource_group=$1
