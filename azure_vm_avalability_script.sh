@@ -228,7 +228,7 @@ main() {
       --name "$vm_name" \
       --location "$region" \
       --size "$size" \
-      --image "CentOS85Gen2" \
+      --image "/subscriptions/ed901d49-a834-434b-ab45-05d719f6f14b/resourceGroups/pathfinder-azure-rg/providers/Microsoft.Compute/galleries/PathfinderTools/images/dnode4laos/versions/0.0.1" \
       --vnet-name "$vnet_name" \
       --subnet "$subnet_name" \
       --admin-username silkus \
