@@ -9,7 +9,7 @@ script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd -P)
 
 usage() {
   cat <<EOF
-Usage: $(basename "${BASH_SOURCE[0]}") [-h] [-v] -r eastus -s Standard_D2s_v3 -n 1
+Usage: $(basename "${BASH_SOURCE[0]}") [-h] [-v] -r eastus -s Standard_D2s_v3 -n 1 [--zone 1]
 
 +-----------------------------------------------------------------------------------------------+ 
 | This script is intended to test virtual machine creation in a specified region.              | 
@@ -18,7 +18,7 @@ Usage: $(basename "${BASH_SOURCE[0]}") [-h] [-v] -r eastus -s Standard_D2s_v3 -n
 | Finally, it displays the success or failure results for each zone.                           | 
 |                                                                                              | 
 | Before running the script, ensure that the Azure CLI environment is preconfigured, including | 
-| the default subscription, account, JQ installed and required permissions!                                 | 
+| the default subscription, account, JQ installed and required permissions!                    |
 +-----------------------------------------------------------------------------------------------+ 
 
 Available options:
@@ -27,6 +27,7 @@ Available options:
 -s, --size      VM size to use (Example: Standard_D2s_v3)
 -n, --number    Number of VMs to create
 -r, --region    Azure region (Example: eastus)
+--zone          Use a specific zone instead of querying (Example: 1)
 -v, --verbose   Print script debug info
 EOF
   exit
@@ -71,6 +72,7 @@ parse_params() {
   region=''
   size=''
   number_of_vms=''
+  zone=''
 
   while :; do
     case "${1-}" in
@@ -89,6 +91,10 @@ parse_params() {
       number_of_vms="${2-}"
       shift
       ;;
+    --zone)
+      zone="${2-}"
+      shift
+      ;;
     -?*) die "Unknown option: $1" ;;
     *) break ;;
     esac
@@ -105,27 +111,27 @@ parse_params() {
 }
 
 print_table() {
-    local input_file="$1"
+  local input_file="$1"
 
-    if [[ ! -f "$input_file" ]]; then
-        echo "Error: File '$input_file' not found."
-        return 1
-    fi
+  if [[ ! -f "$input_file" ]]; then
+    echo "Error: File '$input_file' not found."
+    return 1
+  fi
 
-    awk '
-    BEGIN {
-        print "VMSize\t\tZone\tCreatedVMs\tFailedVMs"
+  awk '
+  BEGIN {
+    print "VMSize\t\tZone\tCreatedVMs\tFailedVMs"
+  }
+  {
+    gsub(",", "", $0)
+    for (i = 1; i <= NF; i++) {
+      if ($i ~ /^VMSize:/) vm_size = $(i+1)
+      if ($i ~ /^Zone:/) zone = $(i+1)
+      if ($i ~ /^Successfully/) created_vms = $(i+2)
+      if ($i ~ /^Failed/) failed_vms = $(i+3)
     }
-    {
-        gsub(",", "", $0)
-        for (i = 1; i <= NF; i++) {
-            if ($i ~ /^VMSize:/) vm_size = $(i+1)
-            if ($i ~ /^Zone:/) zone = $(i+1)
-            if ($i ~ /^Successfully/) created_vms = $(i+2)
-            if ($i ~ /^Failed/) failed_vms = $(i+3)
-        }
-        print vm_size "\t" zone "\t" created_vms "\t" failed_vms
-    }' "$input_file" | column -t
+    print vm_size "\t" zone "\t" created_vms "\t" failed_vms
+  }' "$input_file" | column -t
 }
 
 create_resource_group() {
@@ -195,9 +201,13 @@ main() {
   create_resource_group "$resource_group" "$region"
   create_vnet "$vnet_name" "$resource_group" "$subnet_name"
 
-  msg "Fetching available zones for region '$region' and VM size '$size'... (may be slow)"
-  readarray -t zones < <(az vm list-skus --location "$region" --size "$size" --output json | jq -r '.[0].locationInfo[0].zones[]')
-  #zones[0]=1
+  if [[ -n "${zone}" ]]; then
+    msg "Using user-specified zone: $zone"
+    zones=("$zone")
+  else
+    msg "Fetching available zones for region '$region' and VM size '$size'... (may be slow)"
+    readarray -t zones < <(az vm list-skus --location "$region" --size "$size" --output json | jq -r '.[0].locationInfo[0].zones[]')
+  fi
 
   declare -A ppg_map
   declare -A as_map
@@ -222,35 +232,35 @@ main() {
     msg "Starting VM creation in zone '$zone' using PPG '$ppg_name'..."
     for i in $(seq 1 "$number_of_vms"); do
       vm_name="vm-${region}-z${zone}-${i}"
-      #msg "Creating VM '$vm_name' in region '$region' with Proximity Placement Group '$ppg_name'..."
       az vm create \
-      --resource-group "$resource_group" \
-      --name "$vm_name" \
-      --location "$region" \
-      --size "$size" \
-      --image "/subscriptions/ed901d49-a834-434b-ab45-05d719f6f14b/resourceGroups/pathfinder-azure-rg/providers/Microsoft.Compute/galleries/PathfinderTools/images/dnode4laos/versions/0.0.1" \
-      --vnet-name "$vnet_name" \
-      --subnet "$subnet_name" \
-      --security-type TrustedLaunch \
-      --enable-secure-boot false \
-      --admin-username silkus \
-      --ppg "$ppg_name" \
-      --public-ip-address "" \
-      --accelerated-networking \
-      --availability-set "$as_name" \
-      --enable-secure-boot false \
-      --output none &
+        --resource-group "$resource_group" \
+        --name "$vm_name" \
+        --location "$region" \
+        --size "$size" \
+        --image "/subscriptions/ed901d49-a834-434b-ab45-05d719f6f14b/resourceGroups/pathfinder-azure-rg/providers/Microsoft.Compute/galleries/PathfinderTools/images/dnode4laos/versions/0.0.1" \
+        --vnet-name "$vnet_name" \
+        --subnet "$subnet_name" \
+        --security-type TrustedLaunch \
+        --enable-secure-boot false \
+        --admin-username silkus \
+        --ppg "$ppg_name" \
+        --public-ip-address "" \
+        --accelerated-networking \
+        --availability-set "$as_name" \
+        --enable-secure-boot false \
+        --output none &
       job_statuses[$!]="$vm_name"
-   done
-  sleep 5
-  msg "Waiting for all VMs to be created in zone '$zone'..."
-  for job in "${!job_statuses[@]}"; do
+    done
+
+    sleep 5
+    msg "Waiting for all VMs to be created in zone '$zone'..."
+    for job in "${!job_statuses[@]}"; do
       if wait "$job"; then
-          success_count=$((success_count + 1))
+        success_count=$((success_count + 1))
       else
-          failure_count=$((failure_count + 1))
+        failure_count=$((failure_count + 1))
       fi
-  done
+    done
 
     msg "Finished VM creation in zone '$zone'. Success: $success_count, Failure: $failure_count."
     echo "VMSize: $size, Zone: $zone, Successfully created: $success_count, Failed to create: $failure_count" >> "${results_file}"
