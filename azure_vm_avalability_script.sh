@@ -248,6 +248,7 @@ main() {
         --accelerated-networking \
         --availability-set "$as_name" \
         --enable-secure-boot false \
+        --only-show-errors \
         --output none &
       job_statuses[$!]="$vm_name"
     done
