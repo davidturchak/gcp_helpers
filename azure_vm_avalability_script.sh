@@ -292,7 +292,7 @@ main() {
           --name "$vm_name" \
           --location "$region" \
           --size "$size" \
-          --image "/subscriptions/ed901d49-a834-434b-ab45-05d719f6f14b/resourceGroups/pathfinder-azure-rg/providers/Microsoft.Compute/galleries/PathfinderTools/images/dnode4laos/versions/0.0.1" \
+          --image "Debian:debian-12:12-gen2:latest" \
           --vnet-name "$vnet_name" \
           --subnet "$subnet_name" \
           --security-type TrustedLaunch \
