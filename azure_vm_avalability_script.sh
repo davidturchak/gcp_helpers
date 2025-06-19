@@ -55,13 +55,13 @@ setup_colors() {
 }
 
 msg() {
-  echo >&2 -e "${1-}"
+  echo >&2 -e "[$(date '+%Y-%m-%d %H:%M:%S')] ${1-}"
 }
 
 die() {
   local msg=$1
   local code=${2:-1}
-  msg "${RED}$msg${NOFORMAT}"
+  msg "[$(date '+%Y-%m-%d %H:%M:%S')] ${RED}$msg${NOFORMAT}"
   exit "$code"
 }
 
