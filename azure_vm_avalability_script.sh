@@ -5,7 +5,7 @@ trap cleanup SIGINT SIGTERM ERR EXIT
 randomizer=${RANDOM}
 results_file="/tmp/${randomizer}_test_zones.log"
 
-script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd -P)
+script_dir=$(pwd -P)
 
 usage() {
   cat <<EOF
@@ -17,8 +17,11 @@ Usage: $(basename "${BASH_SOURCE[0]}") [-h] [-v] -r eastus -s Standard_D2s_v3 -n
 | used), creates the necessary resources in each zone, and performs cleanup by deleting the    |
 | created resources. Finally, it displays the success or failure results for each zone.        |
 |                                                                                              |
-| *For region westus, zones are not used, and specifying --zone will cause the script to exit.  |
-| *For region uksouth, the fault domain count is set to 2; other regions use 3.                |
+| For region westus, zones are not used, and specifying --zone will cause the script to exit.  |
+| For region uksouth, the fault domain count is set to 2; other regions use 3.                |
+|                                                                                              |
+| If Proximity Placement Group or Availability Set creation fails, the resource group will be  |
+| deleted before exiting.                                                                     |
 |                                                                                              |
 | Before running the script, ensure that the Azure CLI environment is preconfigured, including |
 | the default subscription, account, JQ installed, and required permissions!                   |
@@ -32,7 +35,7 @@ Available options:
 -r, --region    Azure region (Example: eastus)
 --zone          Use a specific zone instead of querying (Example: 1; not allowed with westus)
 --dnodes        Create groups of 16 VMs (mutually exclusive with --cnodes)
---cnodes        Create groups of 8 VMs (mutually exclusive with --cnodes)
+--cnodes        Create groups of 8 VMs (mutually exclusive with --dnodes)
 -v, --verbose   Print script debug info
 EOF
   exit
@@ -61,6 +64,16 @@ die() {
   exit "$code"
 }
 
+delete_resource_group() {
+  local resource_group=$1
+  if [[ -n "$resource_group" ]]; then
+    msg "Cleaning up by deleting resource group '$resource_group' due to failure..."
+    if ! az group delete --name "$resource_group" --yes --no-wait --output none 2>/dev/null; then
+      msg "${YELLOW}Warning: Failed to delete resource group '$resource_group'${NOFORMAT}"
+    fi
+  fi
+}
+
 validate_jq() {
   if ! command -v jq &> /dev/null; then
     die "jq is not installed. Please install jq to proceed."
@@ -77,7 +90,7 @@ parse_params() {
   region=''
   size=''
   number_of_vms=''
-  zone=''
+  zone=D
   dnodes=false
   cnodes=false
 
@@ -182,6 +195,7 @@ create_vnet() {
     --subnet-name "$subnet_name" \
     --subnet-prefix "10.0.1.0/24" \
     --output none; then
+    delete_resource_group "$resource_group"
     die "Failed to create virtual network '$vnet_name'"
   fi
 }
@@ -197,6 +211,7 @@ create_proximity_placement_group() {
     az_cmd+=(--zone "$zone")
   fi
   if ! "${az_cmd[@]}"; then
+    delete_resource_group "$resource_group"
     die "Failed to create Proximity Placement Group '$ppg_name'"
   fi
 }
@@ -222,6 +237,7 @@ create_availability_set() {
     --platform-fault-domain-count "$fault_domain_count" \
     --platform-update-domain-count 20 \
     --output none; then
+    delete_resource_group "$resource_group"
     die "Failed to create Availability Set '$as_name'"
   fi
 }
@@ -251,6 +267,7 @@ main() {
   else
     msg "Fetching available zones for region '$region' and VM size '$size'... (may be slow)"
     if ! zones_json=$(az vm list-skus --location "$region" --size "$size" --output json); then
+      delete_resource_group "$resource_group"
       die "Failed to fetch available zones for region '$region' and VM size '$size'"
     fi
     readarray -t zones < <(echo "$zones_json" | jq -r '.[0].locationInfo[0].zones[]')
