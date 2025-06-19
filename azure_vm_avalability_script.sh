@@ -201,19 +201,25 @@ create_availability_set() {
   local resource_group=$2
   local region=$3
   local ppg_name=$4
-  msg "Creating Availability Set '$as_name' in region '$region'..."
+  local fault_domain_count=3  # Default fault domain count
+
+  # Set fault domain count to 2 for uksouth
+  if [[ "$region" == "uksouth" ]]; then
+    fault_domain_count=2
+  fi
+
+  msg "Creating Availability Set '$as_name' in region '$region' with fault domain count '$fault_domain_count'..."
   if ! az vm availability-set create \
     --name "$as_name" \
     --resource-group "$resource_group" \
     --location "$region" \
     --ppg "$ppg_name" \
-    --platform-fault-domain-count 3 \
+    --platform-fault-domain-count "$fault_domain_count" \
     --platform-update-domain-count 20 \
     --output none; then
     die "Failed to create Availability Set '$as_name'"
   fi
 }
-
 # Initialize colors early to avoid unbound variable errors
 setup_colors
 
