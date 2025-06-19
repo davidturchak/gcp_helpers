@@ -68,7 +68,7 @@ die() {
 delete_resource_group() {
   local resource_group=$1
   if [[ -n "$resource_group" ]]; then
-    msg "Cleaning up by deleting resource group '$resource_group' due to failure..."
+    msg "Deleting resource group '$resource_group' due to failure..."
     if ! az group delete --name "$resource_group" --yes --no-wait --output none 2>/dev/null; then
       msg "${YELLOW}Warning: Failed to delete resource group '$resource_group'${NOFORMAT}"
     fi
@@ -383,7 +383,7 @@ main() {
     done
   done
 
-  msg "Cleaning up by deleting resource group '$resource_group'..."
+  msg "Deleting resource group '$resource_group'..."
   if ! az group delete --name "$resource_group" --yes --no-wait --output none; then
     die "Failed to delete resource group '$resource_group'"
   fi
