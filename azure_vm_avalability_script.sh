@@ -91,7 +91,7 @@ parse_params() {
   region=''
   size=''
   number_of_vms=''
-  zone=D
+  zone=''  # Initialize zone as empty
   dnodes=false
   cnodes=false
 
@@ -143,8 +143,11 @@ parse_params() {
   fi
 
   # Validate that --zone is not used with westus or northcentralus
-  if [[ ( "$region" == "westus" || "$region" == "northcentralus" ) && -n "$zone" ]]; then
-    die "Cannot specify --zone with region $region, as zones are not used in this region"
+  if [[ "$region" == "westus" || "$region" == "northcentralus" ]]; then
+    if [[ -n "$zone" ]]; then
+      die "Cannot specify --zone with region $region, as zones are not used in this region"
+    fi
+    zone=''  # Explicitly unset zone for these regions
   fi
 
   return 0
@@ -259,10 +262,10 @@ main() {
   create_resource_group "$resource_group" "$region"
   create_vnet "$vnet_name" "$resource_group" "$subnet_name"
 
-if [[ "$region" == "westus" || "$region" == "northcentralus" ]]; then
-  msg "Region is $region, skipping zone fetching and usage."
-  zones=("")
-  elif [[ -n "${zone}" ]]; then
+  if [[ "$region" == "westus" || "$region" == "northcentralus" ]]; then
+    msg "Region is $region, skipping zone fetching and usage."
+    zones=("")
+  elif [[ -n "$zone" ]]; then
     msg "Using user-specified zone: $zone"
     zones=("$zone")
   else
@@ -271,7 +274,7 @@ if [[ "$region" == "westus" || "$region" == "northcentralus" ]]; then
       delete_resource_group "$resource_group"
       die "Failed to fetch available zones for region '$region' and VM size '$size'"
     fi
-    readarray -t zones < <(echo "$zones_json" | jq -r '.[0].locationInfo[0].zones[]')
+    readarray -t zones < <(echo "$zones_json" | jq -r '.[0].locationInfo[0].zones[]' 2>/dev/null || echo "")
   fi
 
   # Set group size based on dnodes or cnodes
@@ -289,7 +292,7 @@ if [[ "$region" == "westus" || "$region" == "northcentralus" ]]; then
 
   # Create PPG and AS for each group (with or without zones)
   if [[ "$region" == "westus" || "$region" == "northcentralus" ]]; then
-    # For westus or northcentralis, create PPG and AS for each group without zones
+    # For westus or northcentralus, create PPG and AS for each group without zones
     for group in $(seq 1 "$num_groups"); do
       ppg_name="ppg-${region}-g${group}-${RANDOM}"
       as_name="as-${region}-g${group}-${RANDOM}"
@@ -365,8 +368,8 @@ if [[ "$region" == "westus" || "$region" == "northcentralus" ]]; then
         job_statuses[$!]="$vm_name"
       done
 
-      sleep 5
-      msg "Waiting for all VMs to be created in ${zone_key:+zone '$zone_key', }group '$group'..."
+      sleep 2
+      msg "Waiting for VMs to be created in ${zone_key:+zone '$zone_key', }group '$group'..."
       for job in "${!job_statuses[@]}"; do
         if wait "$job"; then
           success_count=$((success_count + 1))
