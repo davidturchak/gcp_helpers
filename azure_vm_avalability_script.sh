@@ -17,11 +17,12 @@ Usage: $(basename "${BASH_SOURCE[0]}") [-h] [-v] -r eastus -s Standard_D2s_v3 -n
 | used), creates the necessary resources in each zone, and performs cleanup by deleting the    |
 | created resources. Finally, it displays the success or failure results for each zone.        |
 |                                                                                              |
-| For region westus, zones are not used, and specifying --zone will cause the script to exit.  |
-| For region uksouth, the fault domain count is set to 2; other regions use 3.                |
+| For region westus and northcentralus, zones are not used, and specifying --zone will cause   |
+| the script to exit.                                                                          |  
+| For region uksouth, the fault domain count is set to 2; other regions use 3.                 |
 |                                                                                              |
 | If Proximity Placement Group or Availability Set creation fails, the resource group will be  |
-| deleted before exiting.                                                                     |
+| deleted before exiting.                                                                      |
 |                                                                                              |
 | Before running the script, ensure that the Azure CLI environment is preconfigured, including |
 | the default subscription, account, JQ installed, and required permissions!                   |
@@ -33,7 +34,7 @@ Available options:
 -s, --size      VM size to use (Example: Standard_D2s_v3)
 -n, --number    Number of VMs to create
 -r, --region    Azure region (Example: eastus)
---zone          Use a specific zone instead of querying (Example: 1; not allowed with westus)
+--zone          Use a specific zone instead of querying (Example: 1; not allowed with westus or northcentralus)
 --dnodes        Create groups of 16 VMs (mutually exclusive with --cnodes)
 --cnodes        Create groups of 8 VMs (mutually exclusive with --dnodes)
 -v, --verbose   Print script debug info
@@ -141,9 +142,9 @@ parse_params() {
     die "Must specify either --dnodes or --cnodes"
   fi
 
-  # Validate that --zone is not used with westus
-  if [[ "$region" == "westus" && -n "$zone" ]]; then
-    die "Cannot specify --zone with region westus, as zones are not used in this region"
+  # Validate that --zone is not used with westus or northcentralus
+  if [[ ( "$region" == "westus" || "$region" == "northcentralus" ) && -n "$zone" ]]; then
+    die "Cannot specify --zone with region $region, as zones are not used in this region"
   fi
 
   return 0
@@ -258,9 +259,9 @@ main() {
   create_resource_group "$resource_group" "$region"
   create_vnet "$vnet_name" "$resource_group" "$subnet_name"
 
-  if [[ "$region" == "westus" ]]; then
-    msg "Region is westus, skipping zone fetching and usage."
-    zones=("")  # Set zones to empty to indicate no zones
+if [[ "$region" == "westus" || "$region" == "northcentralus" ]]; then
+  msg "Region is $region, skipping zone fetching and usage."
+  zones=("")
   elif [[ -n "${zone}" ]]; then
     msg "Using user-specified zone: $zone"
     zones=("$zone")
@@ -287,8 +288,8 @@ main() {
   declare -A as_map
 
   # Create PPG and AS for each group (with or without zones)
-  if [[ "$region" == "westus" ]]; then
-    # For westus, create PPG and AS for each group without zones
+  if [[ "$region" == "westus" || "$region" == "northcentralus" ]]; then
+    # For westus or northcentralis, create PPG and AS for each group without zones
     for group in $(seq 1 "$num_groups"); do
       ppg_name="ppg-${region}-g${group}-${RANDOM}"
       as_name="as-${region}-g${group}-${RANDOM}"
@@ -320,8 +321,8 @@ main() {
       failure_count=0
       declare -A job_statuses
 
-      # Use "none" as zone key for westus
-      if [[ "$region" == "westus" ]]; then
+      # Use "none" as zone key for westus or northcentralus
+      if [[ "$region" == "westus" || "$region" == "northcentralus" ]]; then
         zone_key="none"
       else
         zone_key="$zone"
@@ -338,7 +339,7 @@ main() {
 
       msg "Starting VM creation in ${zone_key:+zone '$zone_key', }group '$group' using PPG '$ppg_name'..."
       for i in $(seq "$start_vm" "$end_vm"); do
-        if [[ "$region" == "westus" ]]; then
+        if [[ "$region" == "westus" || "$region" == "northcentralus" ]]; then
           vm_name="vm-${region}-g${group}-${i}"
         else
           vm_name="vm-${region}-z${zone}-g${group}-${i}"
