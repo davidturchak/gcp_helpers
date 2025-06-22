@@ -164,8 +164,12 @@ print_table() {
   awk -v region="$region" '
   BEGIN {
     print "VMSize\t\tZone\t\tGroup\t\tCreatedVMs\tFailedVMs"
+    current_zone = ""
+    success_sum = 0
+    failed_sum = 0
   }
   {
+    # Extract fields
     gsub(",", "", $0)
     for (i = 1; i <= NF; i++) {
       if ($i ~ /^VMSize:/) vm_size = $(i+1)
@@ -174,7 +178,24 @@ print_table() {
       if ($i ~ /^Successfully/) created_vms = $(i+2)
       if ($i ~ /^Failed/) failed_vms = $(i+3)
     }
+    # If zone changes and not the first zone, print summary for previous zone
+    if (current_zone != "" && zone != current_zone) {
+      print "Zone summary: Success " success_sum ", Failed " failed_sum
+      success_sum = 0
+      failed_sum = 0
+    }
+    # Print current line
     print vm_size "\t" region "-" zone "\t" group "\t" created_vms "\t" failed_vms
+    # Update sums for current zone
+    success_sum += created_vms
+    failed_sum += failed_vms
+    current_zone = zone
+  }
+  END {
+    # Print summary for the last zone
+    if (current_zone != "") {
+      print "Zone summary: Success " success_sum ", Failed " failed_sum
+    }
   }' "$input_file" | column -t
 }
 
