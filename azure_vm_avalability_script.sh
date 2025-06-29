@@ -275,9 +275,9 @@ main() {
   validate_az
   parse_params "$@"
 
-  resource_group="test${RANDOM}-rg-${region}"
-  vnet_name="test-vnet-${region}"
-  subnet_name="test-subnet-${region}"
+  resource_group="availability-${randomizer}-rg-${region}"
+  vnet_name="availability-${randomizer}-vnet-${region}"
+  subnet_name="availability-${randomizer}-subnet-${region}"
 
   msg "Creating resource group and virtual network..."
   create_resource_group "$resource_group" "$region"
@@ -315,8 +315,8 @@ main() {
   if [[ "$region" == "westus" || "$region" == "northcentralus" ]]; then
     # For westus or northcentralus, create PPG and AS for each group without zones
     for group in $(seq 1 "$num_groups"); do
-      ppg_name="ppg-${region}-g${group}-${RANDOM}"
-      as_name="as-${region}-g${group}-${RANDOM}"
+      ppg_name="ppg-${region}-g${group}-${randomizer}"
+      as_name="as-${region}-g${group}-${randomizer}"
       create_proximity_placement_group "$ppg_name" "$resource_group" "$region" ""
       create_availability_set "$as_name" "$resource_group" "$region" "$ppg_name"
       ppg_map["none,$group"]="$ppg_name"
@@ -327,8 +327,8 @@ main() {
     # For other regions, create PPG and AS per zone and group
     for zone in "${zones[@]}"; do
       for group in $(seq 1 "$num_groups"); do
-        ppg_name="ppg-${region}-z${zone}-g${group}-${RANDOM}"
-        as_name="as-${region}-z${zone}-g${group}-${RANDOM}"
+        ppg_name="ppg-${region}-z${zone}-g${group}-${randomizer}"
+        as_name="as-${region}-z${zone}-g${group}-${randomizer}"
         create_proximity_placement_group "$ppg_name" "$resource_group" "$region" "$zone"
         create_availability_set "$as_name" "$resource_group" "$region" "$ppg_name"
         ppg_map["$zone,$group"]="$ppg_name"
